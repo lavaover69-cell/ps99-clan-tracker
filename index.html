@@ -39,18 +39,18 @@ td {
   border-bottom: 1px solid #334155;
 }
 
-#controls {
-  text-align:center;
-  margin: 10px 0;
-}
-
 button {
   padding: 8px 12px;
+  margin: 5px;
+  border: none;
   background: #2563eb;
   color: white;
-  border: none;
   border-radius: 6px;
   cursor: pointer;
+}
+
+#controls {
+  text-align:center;
 }
 
 #status {
@@ -64,9 +64,9 @@ button {
 
 <h1>🏆 PS99 Clan Tracker</h1>
 
-<div id="status">Loading...</div>
+<div id="status">Loading all clans...</div>
 
-<input id="search" placeholder="Search ANY clan (global search enabled)">
+<input id="search" placeholder="Search ANY clan (global)">
 
 <div id="controls">
   <button onclick="prevPage()">⬅ Prev</button>
@@ -90,17 +90,18 @@ button {
 
 let page = 1;
 let allClans = [];
+let cachedPages = {};
 
 function formatNumber(x){
   return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
-// load multiple pages into memory (for global search + rank accuracy)
-async function loadAllPages(maxPages = 10){
+// LOAD ALL CLANS ONCE (fixes EVERYTHING)
+async function loadAll(){
 
   allClans = [];
 
-  for(let p = 1; p <= maxPages; p++){
+  for(let p = 1; p <= 20; p++){
 
     const url =
     `https://ps99.biggamesapi.io/api/clans?page=${p}&pageSize=100&sort=Points&sortOrder=desc`;
@@ -108,37 +109,42 @@ async function loadAllPages(maxPages = 10){
     const res = await fetch(url);
     const json = await res.json();
 
-    if(!json.data) break;
+    if(!json.data || json.data.length === 0) break;
 
     json.data.forEach((c, i) => {
+
       allClans.push({
         ...c,
-        globalRank: (p - 1) * 100 + i + 1
+        rank: (p - 1) * 100 + i + 1
       });
+
     });
   }
 
-  renderPage(page);
-
   document.getElementById("status").innerText =
   "Loaded " + allClans.length + " clans";
+
+  renderPage(1);
 }
 
+// FAST PAGE SWITCH (NO API CALLS)
 function renderPage(p){
+
+  page = p;
+
+  const start = (p - 1) * 100;
+  const slice = allClans.slice(start, start + 100);
 
   document.getElementById("pageInfo").innerText =
   "Page " + p;
 
-  const start = (p - 1) * 100;
-  const pageData = allClans.slice(start, start + 100);
-
   const body = document.getElementById("body");
   body.innerHTML = "";
 
-  pageData.forEach(c => {
+  slice.forEach(c => {
     body.innerHTML += `
       <tr>
-        <td>${c.globalRank}</td>
+        <td>${c.rank}</td>
         <td>${c.Name}</td>
         <td>${formatNumber(c.Points)}</td>
         <td>${c.Members}</td>
@@ -148,18 +154,14 @@ function renderPage(p){
 }
 
 function nextPage(){
-  page++;
-  renderPage(page);
+  renderPage(page + 1);
 }
 
 function prevPage(){
-  if(page > 1){
-    page--;
-    renderPage(page);
-  }
+  if(page > 1) renderPage(page - 1);
 }
 
-// GLOBAL SEARCH (THIS FIXES YOUR ISSUE)
+// GLOBAL SEARCH (ALL CLANS + REAL RANK)
 document.getElementById("search").addEventListener("input",function(){
 
   const v = this.value.toLowerCase();
@@ -168,13 +170,16 @@ document.getElementById("search").addEventListener("input",function(){
     c.Name.toLowerCase().includes(v)
   );
 
+  document.getElementById("pageInfo").innerText =
+  "Search results: " + filtered.length;
+
   const body = document.getElementById("body");
   body.innerHTML = "";
 
   filtered.forEach(c => {
     body.innerHTML += `
       <tr>
-        <td>${c.globalRank}</td>
+        <td>${c.rank}</td>
         <td>${c.Name}</td>
         <td>${formatNumber(c.Points)}</td>
         <td>${c.Members}</td>
@@ -182,13 +187,12 @@ document.getElementById("search").addEventListener("input",function(){
     `;
   });
 
-  document.getElementById("pageInfo").innerText =
-  "Search results: " + filtered.length;
 });
 
-loadAllPages();
+// START
+loadAll();
 
-setInterval(() => loadAllPages(), 60000);
+setInterval(loadAll, 60000);
 
 </script>
 
