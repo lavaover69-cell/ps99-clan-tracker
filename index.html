@@ -1,1 +1,137 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>PS99 Clan Tracker</title>
 
+<style>
+body {
+  font-family: Arial, sans-serif;
+  background: #0f172a;
+  color: white;
+  margin: 0;
+  padding: 20px;
+}
+
+h1 {
+  text-align: center;
+}
+
+input {
+  width: 100%;
+  padding: 12px;
+  margin: 10px 0;
+  font-size: 16px;
+  border-radius: 8px;
+  border: none;
+}
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #1e293b;
+}
+
+th {
+  background: #2563eb;
+  padding: 10px;
+}
+
+td {
+  padding: 10px;
+  text-align: center;
+  border-bottom: 1px solid #334155;
+}
+
+tr:hover {
+  background: #334155;
+}
+
+#status {
+  text-align: center;
+  margin-bottom: 10px;
+  opacity: 0.8;
+}
+</style>
+</head>
+
+<body>
+
+<h1>🏆 PS99 Clan Tracker</h1>
+
+<div id="status">Loading...</div>
+
+<input id="search" placeholder="Search clan name...">
+
+<table>
+<thead>
+<tr>
+<th>Rank</th>
+<th>Clan</th>
+<th>Points</th>
+<th>Members</th>
+</tr>
+</thead>
+
+<tbody id="body"></tbody>
+</table>
+
+<script>
+
+const API_URL =
+"https://ps99.biggamesapi.io/api/clans?page=1&pageSize=100&sort=Points&sortOrder=desc";
+
+let clans = [];
+
+async function load() {
+  try {
+    const res = await fetch(API_URL);
+    const json = await res.json();
+
+    clans = json.data || [];
+
+    render(clans);
+
+    document.getElementById("status").innerText =
+      "Updated: " + new Date().toLocaleTimeString();
+
+  } catch (err) {
+    document.getElementById("status").innerText =
+      "Error loading data";
+    console.error(err);
+  }
+}
+
+function render(data) {
+  const body = document.getElementById("body");
+  body.innerHTML = "";
+
+  data.forEach((c, i) => {
+    body.innerHTML += `
+      <tr>
+        <td>${i + 1}</td>
+        <td>${c.Name}</td>
+        <td>${c.Points}</td>
+        <td>${c.Members}</td>
+      </tr>
+    `;
+  });
+}
+
+document.getElementById("search").addEventListener("input", function () {
+  const value = this.value.toLowerCase();
+
+  const filtered = clans.filter(c =>
+    c.Name.toLowerCase().includes(value)
+  );
+
+  render(filtered);
+});
+
+load();
+setInterval(load, 60000);
+
+</script>
+
+</body>
+</html>
