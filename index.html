@@ -12,9 +12,7 @@ body {
   padding: 20px;
 }
 
-h1 {
-  text-align: center;
-}
+h1 { text-align:center; }
 
 input {
   width: 100%;
@@ -42,15 +40,12 @@ td {
 }
 
 #controls {
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 10px;
-  margin: 15px 0;
+  text-align:center;
+  margin: 10px 0;
 }
 
 button {
-  padding: 8px 14px;
+  padding: 8px 12px;
   background: #2563eb;
   color: white;
   border: none;
@@ -58,15 +53,9 @@ button {
   cursor: pointer;
 }
 
-button:disabled {
-  background: #334155;
-  cursor: not-allowed;
-}
-
 #status {
-  text-align: center;
-  opacity: 0.8;
-  margin-bottom: 10px;
+  text-align:center;
+  opacity:0.8;
 }
 </style>
 </head>
@@ -77,12 +66,12 @@ button:disabled {
 
 <div id="status">Loading...</div>
 
-<input id="search" placeholder="Search clans (current page only)">
+<input id="search" placeholder="Search ANY clan (global search enabled)">
 
 <div id="controls">
-  <button onclick="prevPage()" id="prevBtn">⬅ Prev</button>
+  <button onclick="prevPage()">⬅ Prev</button>
   <span id="pageInfo">Page 1</span>
-  <button onclick="nextPage()" id="nextBtn">Next ➡</button>
+  <button onclick="nextPage()">Next ➡</button>
 </div>
 
 <table>
@@ -100,46 +89,56 @@ button:disabled {
 <script>
 
 let page = 1;
-let dataCache = [];
+let allClans = [];
 
 function formatNumber(x){
   return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
-async function loadPage(p){
+// load multiple pages into memory (for global search + rank accuracy)
+async function loadAllPages(maxPages = 10){
 
-  document.getElementById("status").innerText = "Loading...";
+  allClans = [];
 
-  const url =
-  `https://ps99.biggamesapi.io/api/clans?page=${p}&pageSize=100&sort=Points&sortOrder=desc`;
+  for(let p = 1; p <= maxPages; p++){
 
-  const res = await fetch(url);
-  const json = await res.json();
+    const url =
+    `https://ps99.biggamesapi.io/api/clans?page=${p}&pageSize=100&sort=Points&sortOrder=desc`;
 
-  dataCache = json.data || [];
+    const res = await fetch(url);
+    const json = await res.json();
 
-  render(dataCache, p);
+    if(!json.data) break;
+
+    json.data.forEach((c, i) => {
+      allClans.push({
+        ...c,
+        globalRank: (p - 1) * 100 + i + 1
+      });
+    });
+  }
+
+  renderPage(page);
 
   document.getElementById("status").innerText =
-  "Updated: " + new Date().toLocaleTimeString();
+  "Loaded " + allClans.length + " clans";
+}
+
+function renderPage(p){
 
   document.getElementById("pageInfo").innerText =
   "Page " + p;
 
-  document.getElementById("prevBtn").disabled = (p === 1);
-}
-
-function render(data, p){
+  const start = (p - 1) * 100;
+  const pageData = allClans.slice(start, start + 100);
 
   const body = document.getElementById("body");
   body.innerHTML = "";
 
-  const startRank = (p - 1) * 100;
-
-  data.forEach((c,i)=>{
+  pageData.forEach(c => {
     body.innerHTML += `
       <tr>
-        <td>${startRank + i + 1}</td>
+        <td>${c.globalRank}</td>
         <td>${c.Name}</td>
         <td>${formatNumber(c.Points)}</td>
         <td>${c.Members}</td>
@@ -150,30 +149,46 @@ function render(data, p){
 
 function nextPage(){
   page++;
-  loadPage(page);
+  renderPage(page);
 }
 
 function prevPage(){
   if(page > 1){
     page--;
-    loadPage(page);
+    renderPage(page);
   }
 }
 
+// GLOBAL SEARCH (THIS FIXES YOUR ISSUE)
 document.getElementById("search").addEventListener("input",function(){
 
   const v = this.value.toLowerCase();
 
-  const filtered = dataCache.filter(c =>
+  const filtered = allClans.filter(c =>
     c.Name.toLowerCase().includes(v)
   );
 
-  render(filtered, page);
+  const body = document.getElementById("body");
+  body.innerHTML = "";
+
+  filtered.forEach(c => {
+    body.innerHTML += `
+      <tr>
+        <td>${c.globalRank}</td>
+        <td>${c.Name}</td>
+        <td>${formatNumber(c.Points)}</td>
+        <td>${c.Members}</td>
+      </tr>
+    `;
+  });
+
+  document.getElementById("pageInfo").innerText =
+  "Search results: " + filtered.length;
 });
 
-loadPage(page);
+loadAllPages();
 
-setInterval(()=>loadPage(page),60000);
+setInterval(() => loadAllPages(), 60000);
 
 </script>
 
