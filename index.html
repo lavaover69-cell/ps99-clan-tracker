@@ -16,15 +16,15 @@ h1 { text-align:center; }
 
 input {
   width: 100%;
-  padding: 12px;
+  padding: 10px;
   margin: 8px 0;
   border-radius: 8px;
   border: none;
 }
 
 button {
-  padding: 10px;
-  margin: 5px 0;
+  padding: 10px 15px;
+  margin: 5px;
   border: none;
   background: #2563eb;
   color: white;
@@ -49,9 +49,15 @@ td {
   border-bottom: 1px solid #334155;
 }
 
+#controls {
+  text-align:center;
+  margin: 10px 0;
+}
+
 #status {
-  text-align: center;
-  opacity: 0.8;
+  text-align:center;
+  opacity:0.8;
+  margin-bottom:10px;
 }
 </style>
 </head>
@@ -62,10 +68,13 @@ td {
 
 <div id="status">Loading...</div>
 
-<input id="search" placeholder="Search clan name...">
-<input id="jump" placeholder="Find my clan (exact name)">
-<button onclick="findClan()">Find Clan</button>
-<button onclick="loadMore()">Load More Pages</button>
+<input id="search" placeholder="Search clans on this page...">
+
+<div id="controls">
+  <button onclick="prevPage()">⬅ Prev</button>
+  <span id="pageInfo">Page 1</span>
+  <button onclick="nextPage()">Next ➡</button>
+</div>
 
 <table>
 <thead>
@@ -76,55 +85,51 @@ td {
 <th>Members</th>
 </tr>
 </thead>
-
 <tbody id="body"></tbody>
 </table>
 
 <script>
 
-let clans = [];
 let page = 1;
+let pageData = [];
 
 function formatNumber(x){
   return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
 async function loadPage(p){
+
+  document.getElementById("status").innerText = "Loading...";
+
   const url =
   `https://ps99.biggamesapi.io/api/clans?page=${p}&pageSize=100&sort=Points&sortOrder=desc`;
 
   const res = await fetch(url);
   const json = await res.json();
 
-  return json.data || [];
-}
+  pageData = json.data || [];
 
-async function loadInitial(){
-  clans = await loadPage(1);
-  render(clans);
+  render(pageData, p);
 
   document.getElementById("status").innerText =
-  "Loaded page 1";
+  "Updated: " + new Date().toLocaleTimeString();
 }
 
-async function loadMore(){
-  page++;
-  const more = await loadPage(page);
-  clans = clans.concat(more);
-  render(clans);
+function render(data, p){
 
-  document.getElementById("status").innerText =
-  "Loaded page " + page;
-}
+  document.getElementById("pageInfo").innerText =
+  "Page " + p;
 
-function render(data){
   const body = document.getElementById("body");
   body.innerHTML = "";
 
+  const startRank = (p - 1) * 100;
+
   data.forEach((c,i)=>{
+
     body.innerHTML += `
       <tr>
-        <td>${i+1}</td>
+        <td>${startRank + i + 1}</td>
         <td>${c.Name}</td>
         <td>${formatNumber(c.Points)}</td>
         <td>${c.Members}</td>
@@ -133,31 +138,32 @@ function render(data){
   });
 }
 
-document.getElementById("search").addEventListener("input",function(){
-  const v = this.value.toLowerCase();
-  render(clans.filter(c => c.Name.toLowerCase().includes(v)));
-});
-
-function findClan(){
-  const name = document.getElementById("jump").value.toLowerCase();
-
-  const clan = clans.find(c => c.Name.toLowerCase() === name);
-
-  if(!clan){
-    alert("Clan not loaded yet. Load more pages.");
-    return;
-  }
-
-  alert(
-    clan.Name +
-    " | Points: " +
-    formatNumber(clan.Points)
-  );
+function nextPage(){
+  page++;
+  loadPage(page);
 }
 
-loadInitial();
+function prevPage(){
+  if(page > 1){
+    page--;
+    loadPage(page);
+  }
+}
 
-setInterval(loadInitial,60000);
+document.getElementById("search").addEventListener("input",function(){
+
+  const v = this.value.toLowerCase();
+
+  const filtered = pageData.filter(c =>
+    c.Name.toLowerCase().includes(v)
+  );
+
+  render(filtered, page);
+});
+
+loadPage(page);
+
+setInterval(()=>loadPage(page),60000);
 
 </script>
 
