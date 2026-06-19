@@ -12,24 +12,16 @@ body {
   padding: 20px;
 }
 
-h1 { text-align:center; }
+h1 {
+  text-align: center;
+}
 
 input {
   width: 100%;
-  padding: 10px;
-  margin: 8px 0;
+  padding: 12px;
+  margin: 10px 0;
   border-radius: 8px;
   border: none;
-}
-
-button {
-  padding: 10px 15px;
-  margin: 5px;
-  border: none;
-  background: #2563eb;
-  color: white;
-  border-radius: 6px;
-  cursor: pointer;
 }
 
 table {
@@ -44,20 +36,37 @@ th {
 }
 
 td {
-  padding: 8px;
+  padding: 10px;
   text-align: center;
   border-bottom: 1px solid #334155;
 }
 
 #controls {
-  text-align:center;
-  margin: 10px 0;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 10px;
+  margin: 15px 0;
+}
+
+button {
+  padding: 8px 14px;
+  background: #2563eb;
+  color: white;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+}
+
+button:disabled {
+  background: #334155;
+  cursor: not-allowed;
 }
 
 #status {
-  text-align:center;
-  opacity:0.8;
-  margin-bottom:10px;
+  text-align: center;
+  opacity: 0.8;
+  margin-bottom: 10px;
 }
 </style>
 </head>
@@ -68,12 +77,12 @@ td {
 
 <div id="status">Loading...</div>
 
-<input id="search" placeholder="Search clans on this page...">
+<input id="search" placeholder="Search clans (current page only)">
 
 <div id="controls">
-  <button onclick="prevPage()">⬅ Prev</button>
+  <button onclick="prevPage()" id="prevBtn">⬅ Prev</button>
   <span id="pageInfo">Page 1</span>
-  <button onclick="nextPage()">Next ➡</button>
+  <button onclick="nextPage()" id="nextBtn">Next ➡</button>
 </div>
 
 <table>
@@ -91,7 +100,7 @@ td {
 <script>
 
 let page = 1;
-let pageData = [];
+let dataCache = [];
 
 function formatNumber(x){
   return x.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -107,18 +116,20 @@ async function loadPage(p){
   const res = await fetch(url);
   const json = await res.json();
 
-  pageData = json.data || [];
+  dataCache = json.data || [];
 
-  render(pageData, p);
+  render(dataCache, p);
 
   document.getElementById("status").innerText =
   "Updated: " + new Date().toLocaleTimeString();
-}
-
-function render(data, p){
 
   document.getElementById("pageInfo").innerText =
   "Page " + p;
+
+  document.getElementById("prevBtn").disabled = (p === 1);
+}
+
+function render(data, p){
 
   const body = document.getElementById("body");
   body.innerHTML = "";
@@ -126,7 +137,6 @@ function render(data, p){
   const startRank = (p - 1) * 100;
 
   data.forEach((c,i)=>{
-
     body.innerHTML += `
       <tr>
         <td>${startRank + i + 1}</td>
@@ -154,7 +164,7 @@ document.getElementById("search").addEventListener("input",function(){
 
   const v = this.value.toLowerCase();
 
-  const filtered = pageData.filter(c =>
+  const filtered = dataCache.filter(c =>
     c.Name.toLowerCase().includes(v)
   );
 
