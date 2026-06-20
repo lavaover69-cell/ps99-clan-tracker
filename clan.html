@@ -1,0 +1,204 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>PS99 Clan Profile</title>
+
+<style>
+body{
+    font-family:Arial,sans-serif;
+    background:#0f172a;
+    color:white;
+    margin:0;
+    padding:30px;
+}
+
+.card{
+    max-width:800px;
+    margin:auto;
+    background:#1e293b;
+    border-radius:12px;
+    padding:25px;
+}
+
+h1{
+    text-align:center;
+}
+
+.info{
+    margin:12px 0;
+    font-size:18px;
+}
+
+.value{
+    color:#60a5fa;
+}
+
+.back{
+    display:inline-block;
+    margin-bottom:20px;
+    color:#60a5fa;
+    text-decoration:none;
+}
+
+#icon{
+    display:block;
+    margin:auto;
+    max-width:200px;
+}
+</style>
+</head>
+
+<body>
+
+<div class="card">
+
+<a class="back" href="./">
+⬅ Back to Leaderboard
+</a>
+
+<h1 id="clanName">Loading...</h1>
+
+<div id="battleName" class="info">
+🏆 Clan Battle: Loading...
+</div>
+
+<img id="icon" style="display:none;">
+
+<div class="info">
+Rank:
+<span id="rank" class="value">-</span>
+</div>
+
+<div class="info">
+Points:
+<span id="points" class="value">-</span>
+</div>
+
+<div class="info">
+Members:
+<span id="members" class="value">-</span>
+</div>
+
+<div class="info">
+Gems Donated:
+<span id="diamonds" class="value">-</span>
+</div>
+
+<div class="info">
+Country:
+<span id="country" class="value">-</span>
+</div>
+
+</div>
+
+<script>
+
+function commas(x){
+    return Number(x).toLocaleString();
+}
+
+const params = new URLSearchParams(location.search);
+const clanName = params.get("name");
+
+document.getElementById("clanName").textContent =
+clanName || "Unknown Clan";
+
+async function loadClan(){
+
+    let rank = 1;
+    let found = null;
+
+    for(let page=1; page<=10; page++){
+
+        const url =
+        `https://ps99.biggamesapi.io/api/clans?page=${page}&pageSize=100&sort=Points&sortOrder=desc`;
+
+        const res = await fetch(url);
+        const json = await res.json();
+
+        if(!json.data) break;
+
+        for(const clan of json.data){
+
+            if(
+                clan.Name.toLowerCase() ===
+                clanName.toLowerCase()
+            ){
+                found = clan;
+                found.rank = rank;
+                break;
+            }
+
+            rank++;
+        }
+
+        if(found) break;
+    }
+
+    if(!found){
+
+        document.getElementById("clanName").textContent =
+        "Clan Not Found";
+
+        return;
+    }
+
+    document.getElementById("rank").textContent =
+    "#" + found.rank;
+
+    document.getElementById("points").textContent =
+    commas(found.Points);
+
+    document.getElementById("members").textContent =
+    found.Members + "/" + found.MemberCapacity;
+
+    document.getElementById("diamonds").textContent =
+    commas(found.DepositedDiamonds);
+
+    document.getElementById("country").textContent =
+    found.CountryCode || "Unknown";
+
+    if(found.Icon){
+
+        const img =
+        document.getElementById("icon");
+
+        img.style.display = "block";
+
+        img.src =
+        "https://tr.rbxcdn.com/30DAY-Asset.ashx?aid=" +
+        found.Icon.replace("rbxassetid://","") +
+        "&fmt=png";
+    }
+}
+
+async function loadBattle(){
+
+    try{
+
+        const res =
+        await fetch(
+          "https://ps99.biggamesapi.io/api/activeClanBattle"
+        );
+
+        const json = await res.json();
+
+        document.getElementById("battleName").textContent =
+        "🏆 Clan Battle: " +
+        (json?.data?.Name || "Unknown");
+
+    }catch{
+
+        document.getElementById("battleName").textContent =
+        "🏆 Clan Battle: Unknown";
+    }
+}
+
+loadClan();
+loadBattle();
+
+</script>
+
+</body>
+</html>
