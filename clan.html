@@ -41,10 +41,22 @@ h1{
     text-decoration:none;
 }
 
+.back:hover{
+    text-decoration:underline;
+}
+
 #icon{
     display:block;
     margin:auto;
     max-width:200px;
+    max-height:200px;
+}
+
+#battleName{
+    text-align:center;
+    color:#60a5fa;
+    margin-bottom:20px;
+    font-size:20px;
 }
 </style>
 </head>
@@ -57,11 +69,13 @@ h1{
 ⬅ Back to Leaderboard
 </a>
 
-<h1 id="clanName">Loading...</h1>
-
-<div id="battleName" class="info">
+<div id="battleName">
 🏆 Clan Battle: Loading...
 </div>
+
+<h1 id="clanName">
+Loading...
+</h1>
 
 <img id="icon" style="display:none;">
 
@@ -95,10 +109,37 @@ Country:
 <script>
 
 function commas(x){
-    return Number(x).toLocaleString();
+    return Number(x || 0).toLocaleString();
 }
 
-const params = new URLSearchParams(location.search);
+const countries = {
+  GB:"United Kingdom",
+  US:"United States",
+  JP:"Japan",
+  NL:"Netherlands",
+  PH:"Philippines",
+  XK:"Kosovo",
+  CA:"Canada",
+  AU:"Australia",
+  DE:"Germany",
+  FR:"France",
+  IT:"Italy",
+  ES:"Spain",
+  BR:"Brazil",
+  MX:"Mexico",
+  KR:"South Korea",
+  CN:"China",
+  IN:"India",
+  RU:"Russia",
+  SE:"Sweden",
+  NO:"Norway",
+  DK:"Denmark",
+  FI:"Finland",
+  PL:"Poland",
+  TR:"Turkey"
+};
+
+const params = new URLSearchParams(window.location.search);
 const clanName = params.get("name");
 
 document.getElementById("clanName").textContent =
@@ -109,31 +150,38 @@ async function loadClan(){
     let rank = 1;
     let found = null;
 
-    for(let page=1; page<=10; page++){
+    for(let page = 1; page <= 10; page++){
 
-        const url =
-        `https://ps99.biggamesapi.io/api/clans?page=${page}&pageSize=100&sort=Points&sortOrder=desc`;
+        try{
 
-        const res = await fetch(url);
-        const json = await res.json();
+            const url =
+            `https://ps99.biggamesapi.io/api/clans?page=${page}&pageSize=100&sort=Points&sortOrder=desc`;
 
-        if(!json.data) break;
+            const res = await fetch(url);
+            const json = await res.json();
 
-        for(const clan of json.data){
+            if(!json.data) break;
 
-            if(
-                clan.Name.toLowerCase() ===
-                clanName.toLowerCase()
-            ){
-                found = clan;
-                found.rank = rank;
-                break;
+            for(const clan of json.data){
+
+                if(
+                    clan.Name.toLowerCase() ===
+                    clanName.toLowerCase()
+                ){
+                    found = clan;
+                    found.rank = rank;
+                    break;
+                }
+
+                rank++;
             }
 
-            rank++;
-        }
+            if(found) break;
 
-        if(found) break;
+        }catch(err){
+            console.error(err);
+            break;
+        }
     }
 
     if(!found){
@@ -151,15 +199,22 @@ async function loadClan(){
     commas(found.Points);
 
     document.getElementById("members").textContent =
-    found.Members + "/" + found.MemberCapacity;
+    `${found.Members}/${found.MemberCapacity}`;
 
     document.getElementById("diamonds").textContent =
     commas(found.DepositedDiamonds);
 
+    const code = found.CountryCode || "Unknown";
+
     document.getElementById("country").textContent =
-    found.CountryCode || "Unknown";
+    countries[code]
+      ? `${code} (${countries[code]})`
+      : code;
 
     if(found.Icon){
+
+        const assetId =
+        found.Icon.replace("rbxassetid://","");
 
         const img =
         document.getElementById("icon");
@@ -167,9 +222,11 @@ async function loadClan(){
         img.style.display = "block";
 
         img.src =
-        "https://tr.rbxcdn.com/30DAY-Asset.ashx?aid=" +
-        found.Icon.replace("rbxassetid://","") +
-        "&fmt=png";
+        `https://tr.rbxcdn.com/30DAY-Asset.ashx?aid=${assetId}&fmt=png`;
+
+        img.onerror = function(){
+            img.style.display = "none";
+        };
     }
 }
 
@@ -179,7 +236,7 @@ async function loadBattle(){
 
         const res =
         await fetch(
-          "https://ps99.biggamesapi.io/api/activeClanBattle"
+            "https://ps99.biggamesapi.io/api/activeClanBattle"
         );
 
         const json = await res.json();
@@ -191,7 +248,7 @@ async function loadBattle(){
     }catch{
 
         document.getElementById("battleName").textContent =
-        "🏆 Clan Battle: Unknown";
+        "🏆 Clan Battle";
     }
 }
 
