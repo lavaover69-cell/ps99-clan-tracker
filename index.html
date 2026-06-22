@@ -30,6 +30,35 @@ h1{
     margin-bottom:10px;
 }
 
+#podium{
+    display:flex;
+    justify-content:center;
+    align-items:flex-end;
+    gap:20px;
+    margin:20px 0;
+    text-align:center;
+}
+
+.podium-card{
+    background:#1e293b;
+    border-radius:12px;
+    padding:15px;
+    min-width:140px;
+}
+
+.first{
+    font-size:24px;
+    border:2px solid gold;
+}
+
+.second{
+    border:2px solid silver;
+}
+
+.third{
+    border:2px solid #cd7f32;
+}
+
 input{
     width:100%;
     padding:12px;
@@ -98,6 +127,8 @@ button:hover{
 Loading clan battle...
 </div>
 
+<div id="podium"></div>
+
 <div id="status">
 Loading clans...
 </div>
@@ -137,9 +168,11 @@ function commas(x){
 }
 
 async function loadBattle(){
+
     try{
+
         const res = await fetch(
-          "https://ps99.biggamesapi.io/api/activeClanBattle"
+            "https://ps99.biggamesapi.io/api/activeClanBattle"
         );
 
         const json = await res.json();
@@ -149,6 +182,7 @@ async function loadBattle(){
             (json?.data?.Name || "Unknown");
 
     }catch{
+
         document.getElementById("battleName").innerHTML =
             "🏆 Current Clan Battle";
     }
@@ -209,7 +243,45 @@ function renderPage(p){
 
     body.innerHTML = "";
 
+    if(p === 1 && allClans.length >= 3){
+
+        document.getElementById("podium").innerHTML = `
+        <div class="podium-card second">
+            <div style="font-size:32px;">🥈</div>
+            <div><strong>${allClans[1].Name}</strong></div>
+            <div>#2</div>
+        </div>
+
+        <div class="podium-card first">
+            <div style="font-size:40px;">🥇</div>
+            <div><strong>${allClans[0].Name}</strong></div>
+            <div>#1</div>
+        </div>
+
+        <div class="podium-card third">
+            <div style="font-size:32px;">🥉</div>
+            <div><strong>${allClans[2].Name}</strong></div>
+            <div>#3</div>
+        </div>
+        `;
+    }
+    else{
+        document.getElementById("podium").innerHTML = "";
+    }
+
     pageClans.forEach(clan => {
+
+        let medal = "";
+
+        if(clan.rank === 1){
+            medal = "🥇 ";
+        }
+        else if(clan.rank === 2){
+            medal = "🥈 ";
+        }
+        else if(clan.rank === 3){
+            medal = "🥉 ";
+        }
 
         body.innerHTML += `
         <tr>
@@ -217,7 +289,7 @@ function renderPage(p){
 
             <td>
                 <a href="clan.html?name=${encodeURIComponent(clan.Name)}">
-                    ${clan.Name}
+                    ${medal}${clan.Name}
                 </a>
             </td>
 
@@ -258,6 +330,8 @@ document.getElementById("search")
         return;
     }
 
+    document.getElementById("podium").innerHTML = "";
+
     const filtered =
       allClans.filter(c =>
         c.Name.toLowerCase().includes(search)
@@ -273,13 +347,25 @@ document.getElementById("search")
 
     filtered.forEach(clan => {
 
+        let medal = "";
+
+        if(clan.rank === 1){
+            medal = "🥇 ";
+        }
+        else if(clan.rank === 2){
+            medal = "🥈 ";
+        }
+        else if(clan.rank === 3){
+            medal = "🥉 ";
+        }
+
         body.innerHTML += `
         <tr>
             <td>#${clan.rank}</td>
 
             <td>
                 <a href="clan.html?name=${encodeURIComponent(clan.Name)}">
-                    ${clan.Name}
+                    ${medal}${clan.Name}
                 </a>
             </td>
 
